@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createWorkspace,
   getUserWorkspaces,
+  getWorkspaceActivities,
   inviteWorkspaceMember,
   getWorkspaceMembers,
   updateWorkspaceMemberRole,
@@ -69,6 +70,37 @@ router.post('/', authenticate, createWorkspace);
  *         description: Bị chặn (Chưa gửi Token hoặc Token sai)
  */
 router.get('/', authenticate, getUserWorkspaces);
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/activities:
+ *   get:
+ *     summary: Lấy lịch sử hoạt động của Workspace
+ *     description: Trả về tối đa 50 hoạt động gần nhất của Workspace.
+ *     tags: [Workspaces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của Workspace
+ *     responses:
+ *       200:
+ *         description: Lấy lịch sử hoạt động thành công
+ *       401:
+ *         description: Token không hợp lệ hoặc chưa đăng nhập
+ *       403:
+ *         description: User không thuộc Workspace
+ */
+router.get(
+  '/:workspaceId/activities',
+  authenticate,
+  checkWorkspaceMember,
+  getWorkspaceActivities
+);
 
 /**
  * @swagger

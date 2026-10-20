@@ -50,6 +50,8 @@ export const getWorkspaceDocument = async (req, res) => {
     return res.status(200).json({
       message: 'Lấy tài liệu thành công',
       document,
+      role: req.membership.role,
+      isEditable: ['owner', 'editor'].includes(req.membership.role),
     });
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi server', error: error.message });

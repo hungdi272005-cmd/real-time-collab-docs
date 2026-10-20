@@ -161,6 +161,31 @@ describe('Document API', () => {
 
     expect(detailResponse.status).toBe(200);
     expect(detailResponse.body.document.title).toBe('Test Document');
+    expect(detailResponse.body.role).toBe('viewer');
+    expect(detailResponse.body.isEditable).toBe(false);
+
+    const ownerDetailResponse = await request(app)
+      .get(`/api/workspaces/${workspaceId}/documents/${document._id}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(ownerDetailResponse.status).toBe(200);
+    expect(ownerDetailResponse.body.isEditable).toBe(true);
+  });
+
+  test('member can read workspace activities', async () => {
+    await createDocumentAsOwner('Activity Document');
+
+    const response = await request(app)
+      .get(`/api/workspaces/${workspaceId}/activities`)
+      .set('Authorization', `Bearer ${viewerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.activities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ action: 'CREATED_WORKSPACE' }),
+        expect.objectContaining({ action: 'CREATED_DOCUMENT' }),
+      ])
+    );
   });
 
   test('editor can rename a document', async () => {

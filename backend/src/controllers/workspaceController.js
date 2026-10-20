@@ -71,6 +71,30 @@ export const getUserWorkspaces = async (req, res) => {
   }
 };
 
+// [GET] /api/workspaces/:workspaceId/activities - Lấy lịch sử hoạt động
+export const getWorkspaceActivities = async (req, res) => {
+  try {
+    const activities = await Activity.find({ workspaceId: req.params.workspaceId })
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    return res.status(200).json({
+      message: 'Lấy lịch sử hoạt động thành công',
+      activities: activities.map(activity => ({
+        id: activity._id,
+        workspaceId: activity.workspaceId,
+        user: activity.userId,
+        action: activity.action,
+        targetId: activity.targetId,
+        createdAt: activity.createdAt,
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
 // [POST] /api/workspaces/:workspaceId/members - Mời thành viên vào Workspace
 export const inviteWorkspaceMember = async (req, res) => {
   try {

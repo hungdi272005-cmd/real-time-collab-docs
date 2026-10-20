@@ -93,7 +93,16 @@ router.post(
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200: { description: Lấy tài liệu thành công }
+ *       200:
+ *         description: Lấy tài liệu thành công và trả về quyền chỉnh sửa của user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 document: { type: object }
+ *                 role: { type: string, enum: [owner, editor, viewer] }
+ *                 isEditable: { type: boolean, example: true }
  *       403: { description: Không có quyền truy cập Workspace }
  *       404: { description: Không tìm thấy tài liệu }
  */
