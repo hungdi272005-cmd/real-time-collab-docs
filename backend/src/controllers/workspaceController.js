@@ -88,7 +88,35 @@ export const inviteWorkspaceMember = async (req, res) => {
 
     const existingMembership = await WorkspaceMember.findOne({ workspaceId, userId });
     if (existingMembership) {
-      return res.status(409).json({ message: 'User đã là thành viên của Workspace' });
+      if (existingMembership.isActive !== false) {
+        return res.status(409).json({ message: 'User đã là thành viên của Workspace' });
+      }
+
+      existingMembership.role = 'viewer';
+      existingMembership.isActive = true;
+      existingMembership.removedAt = null;
+      await existingMembership.save();
+
+      await Activity.create({
+        workspaceId,
+        userId: req.user.id,
+        action: 'REINVITED_MEMBER',
+        targetId: invitedUser._id,
+      });
+
+      return res.status(200).json({
+        message: 'Mời lại thành viên thành công',
+        member: {
+          id: existingMembership._id,
+          workspaceId: existingMembership.workspaceId,
+          userId: invitedUser._id,
+          name: invitedUser.name,
+          email: invitedUser.email,
+          role: existingMembership.role,
+          isActive: existingMembership.isActive,
+          removedAt: existingMembership.removedAt,
+        },
+      });
     }
 
     // Không nhận role từ client: thành viên được mời luôn bắt đầu với viewer.
@@ -114,6 +142,8 @@ export const inviteWorkspaceMember = async (req, res) => {
         name: invitedUser.name,
         email: invitedUser.email,
         role: membership.role,
+        isActive: membership.isActive,
+        removedAt: membership.removedAt,
       },
     });
   } catch (error) {
@@ -128,7 +158,10 @@ export const inviteWorkspaceMember = async (req, res) => {
 // [GET] /api/workspaces/:workspaceId/members - Xem danh sách thành viên
 export const getWorkspaceMembers = async (req, res) => {
   try {
-    const members = await WorkspaceMember.find({ workspaceId: req.params.workspaceId })
+    const members = await WorkspaceMember.find({
+      workspaceId: req.params.workspaceId,
+      isActive: { $ne: false },
+    })
       .populate('userId', 'name email')
       .sort({ createdAt: 1 });
 
@@ -143,6 +176,8 @@ export const getWorkspaceMembers = async (req, res) => {
           name: member.userId.name,
           email: member.userId.email,
           role: member.role,
+          isActive: member.isActive !== false,
+          removedAt: member.removedAt,
           createdAt: member.createdAt,
         })),
     });
@@ -165,7 +200,11 @@ export const updateWorkspaceMemberRole = async (req, res) => {
       return res.status(400).json({ message: 'Role chỉ có thể là editor hoặc viewer' });
     }
 
-    const membership = await WorkspaceMember.findOne({ workspaceId, userId });
+    const membership = await WorkspaceMember.findOne({
+      workspaceId,
+      userId,
+      isActive: { $ne: false },
+    });
     if (!membership) {
       return res.status(404).json({ message: 'User không phải thành viên của Workspace' });
     }
@@ -207,7 +246,11 @@ export const removeWorkspaceMember = async (req, res) => {
       return res.status(400).json({ message: 'userId không hợp lệ' });
     }
 
-    const membership = await WorkspaceMember.findOne({ workspaceId, userId });
+    const membership = await WorkspaceMember.findOne({
+      workspaceId,
+      userId,
+      isActive: { $ne: false },
+    });
     if (!membership) {
       return res.status(404).json({ message: 'User không phải thành viên của Workspace' });
     }
@@ -216,7 +259,9 @@ export const removeWorkspaceMember = async (req, res) => {
       return res.status(403).json({ message: 'Không thể xóa owner khỏi Workspace' });
     }
 
-    await membership.deleteOne();
+    membership.isActive = false;
+    membership.removedAt = new Date();
+    await membership.save();
 
     await Activity.create({
       workspaceId,
@@ -228,6 +273,8 @@ export const removeWorkspaceMember = async (req, res) => {
     return res.status(200).json({
       message: 'Xóa thành viên thành công',
       userId,
+      isActive: membership.isActive,
+      removedAt: membership.removedAt,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi server', error: error.message });

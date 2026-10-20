@@ -14,7 +14,12 @@ export const checkWorkspaceMember = async (req, res, next) => {
   }
 
   try {
-    const membership = await WorkspaceMember.findOne({ workspaceId, userId }).lean();
+    const membership = await WorkspaceMember.findOne({
+      workspaceId,
+      userId,
+      // $ne vẫn coi dữ liệu cũ chưa có isActive là đang hoạt động.
+      isActive: { $ne: false },
+    }).lean();
 
     if (!membership) {
       return res.status(403).json({ message: 'Bạn không có quyền truy cập Workspace' });

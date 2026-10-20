@@ -171,9 +171,10 @@ describe('Workspace member API', () => {
       .set('Authorization', `Bearer ${ownerToken}`);
 
     expect(response.status).toBe(200);
-    await expect(
-      WorkspaceMember.findOne({ workspaceId, userId: member._id })
-    ).resolves.toBeNull();
+    const removedMembership = await WorkspaceMember.findOne({ workspaceId, userId: member._id });
+    expect(removedMembership).not.toBeNull();
+    expect(removedMembership.isActive).toBe(false);
+    expect(removedMembership.removedAt).toEqual(expect.any(Date));
   });
 
   test('owner cannot remove the owner membership', async () => {
@@ -182,5 +183,34 @@ describe('Workspace member API', () => {
       .set('Authorization', `Bearer ${ownerToken}`);
 
     expect(response.status).toBe(403);
+  });
+
+  test('removed member loses access and can be re-invited', async () => {
+    await WorkspaceMember.create({
+      workspaceId,
+      userId: member._id,
+      role: 'editor',
+    });
+
+    const removeResponse = await request(app)
+      .delete(`/api/workspaces/${workspaceId}/members/${member._id}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(removeResponse.status).toBe(200);
+
+    const accessResponse = await request(app)
+      .get(`/api/workspaces/${workspaceId}/access-check`)
+      .set('Authorization', `Bearer ${memberToken}`);
+
+    expect(accessResponse.status).toBe(403);
+
+    const reinviteResponse = await request(app)
+      .post(`/api/workspaces/${workspaceId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ userId: member._id.toString() });
+
+    expect(reinviteResponse.status).toBe(200);
+    expect(reinviteResponse.body.member.role).toBe('viewer');
+    expect(reinviteResponse.body.member.isActive).toBe(true);
   });
 });
