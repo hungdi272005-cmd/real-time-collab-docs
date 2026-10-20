@@ -101,7 +101,9 @@ router.get('/', authenticate, getUserWorkspaces);
  *                 example: 6ac909992e019286024b16cd5
  *     responses:
  *       201:
- *         description: Mời thành viên thành công
+ *         description: Mời thành viên mới thành công
+ *       200:
+ *         description: Kích hoạt lại thành viên đã bị xóa mềm
  *       400:
  *         description: workspaceId hoặc userId không hợp lệ
  *       401:
@@ -197,8 +199,8 @@ router.patch(
  * @swagger
  * /api/workspaces/{workspaceId}/members/{userId}:
  *   delete:
- *     summary: Xóa thành viên khỏi Workspace
- *     description: Chỉ owner được xóa thành viên và không thể xóa owner.
+ *     summary: Xóa mềm thành viên khỏi Workspace
+ *     description: Chỉ owner được xóa thành viên và không thể xóa owner. Bản ghi vẫn được giữ lại để có thể mời lại.
  *     tags: [Workspaces]
  *     security:
  *       - bearerAuth: []

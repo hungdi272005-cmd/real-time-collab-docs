@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 import workspaceRoutes from './routes/workspaceRoutes.js';
 import { setupSwagger } from './config/swagger.js';
 
@@ -20,6 +21,7 @@ setupSwagger(app);
 // Đăng ký API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/workspaces/:workspaceId/documents', documentRoutes);
 
 // Route mặc định kiểm tra server
 app.get('/', (req, res) => {
