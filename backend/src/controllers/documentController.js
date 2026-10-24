@@ -1,183 +1,95 @@
-import mongoose from 'mongoose';
-import Activity from '../models/Activity.js';
-import Document from '../models/Document.js';
-
-const isValidId = (value) => mongoose.isValidObjectId(value);
-
-const documentQuery = (workspaceId, documentId) => ({
-  _id: documentId,
-  workspaceId,
-});
+import {
+  createDocument,
+  deleteDocument,
+  getDocument,
+  getDocuments,
+  renameDocument,
+} from '../services/documentService.js';
+import { sendControllerError } from '../utils/controllerError.js';
 
 // [GET] /api/workspaces/:workspaceId/documents
 export const getWorkspaceDocuments = async (req, res) => {
   try {
-    const documents = await Document.find({
-      workspaceId: req.params.workspaceId,
-      // $ne vẫn lấy được các document cũ chưa có trường isDeleted.
-      isDeleted: { $ne: true },
-    })
-      .populate('createdBy', 'name email')
-      .sort({ updatedAt: -1 });
+    const documents = await getDocuments(req.params.workspaceId);
 
     return res.status(200).json({
       message: 'Lấy danh sách tài liệu thành công',
       documents,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return sendControllerError(res, error);
   }
 };
 
 // [GET] /api/workspaces/:workspaceId/documents/:documentId
 export const getWorkspaceDocument = async (req, res) => {
   try {
-    const { workspaceId, documentId } = req.params;
-    if (!isValidId(documentId)) {
-      return res.status(400).json({ message: 'documentId không hợp lệ' });
-    }
-
-    const document = await Document.findOne({
-      ...documentQuery(workspaceId, documentId),
-      isDeleted: { $ne: true },
-    })
-      .populate('createdBy', 'name email');
-
-    if (!document) {
-      return res.status(404).json({ message: 'Không tìm thấy tài liệu trong Workspace' });
-    }
+    const result = await getDocument(
+      req.params.workspaceId,
+      req.params.documentId,
+      req.membership.role
+    );
 
     return res.status(200).json({
       message: 'Lấy tài liệu thành công',
-      document,
-      role: req.membership.role,
-      isEditable: ['owner', 'editor'].includes(req.membership.role),
+      ...result,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return sendControllerError(res, error);
   }
 };
 
 // [POST] /api/workspaces/:workspaceId/documents
 export const createWorkspaceDocument = async (req, res) => {
   try {
-    const { workspaceId } = req.params;
-    const title = req.body.title === undefined
-      ? 'Untitled Document'
-      : typeof req.body.title === 'string'
-        ? req.body.title.trim()
-        : null;
-
-    if (title === null) {
-      return res.status(400).json({ message: 'Tên tài liệu phải là chuỗi' });
-    }
-
-    if (!title) {
-      return res.status(400).json({ message: 'Tên tài liệu không được để trống' });
-    }
-
-    const document = await Document.create({
-      workspaceId,
-      title,
-      createdBy: req.user.id,
-      isDeleted: false,
-      deletedAt: null,
-    });
-
-    await Activity.create({
-      workspaceId,
-      userId: req.user.id,
-      action: 'CREATED_DOCUMENT',
-      targetId: document._id,
-    });
+    const document = await createDocument(
+      req.params.workspaceId,
+      req.user.id,
+      req.body.title
+    );
 
     return res.status(201).json({
       message: 'Tạo tài liệu thành công',
       document,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return sendControllerError(res, error);
   }
 };
 
 // [PATCH] /api/workspaces/:workspaceId/documents/:documentId
 export const renameWorkspaceDocument = async (req, res) => {
   try {
-    const { workspaceId, documentId } = req.params;
-    const title = typeof req.body.title === 'string' ? req.body.title.trim() : '';
-
-    if (!isValidId(documentId)) {
-      return res.status(400).json({ message: 'documentId không hợp lệ' });
-    }
-
-    if (!title) {
-      return res.status(400).json({ message: 'Tên tài liệu không được để trống' });
-    }
-
-    const document = await Document.findOneAndUpdate(
-      {
-        ...documentQuery(workspaceId, documentId),
-        isDeleted: { $ne: true },
-      },
-      { title },
-      { new: true, runValidators: true }
+    const document = await renameDocument(
+      req.params.workspaceId,
+      req.params.documentId,
+      req.user.id,
+      req.body.title
     );
-
-    if (!document) {
-      return res.status(404).json({ message: 'Không tìm thấy tài liệu trong Workspace' });
-    }
-
-    await Activity.create({
-      workspaceId,
-      userId: req.user.id,
-      action: 'RENAMED_DOCUMENT',
-      targetId: document._id,
-    });
 
     return res.status(200).json({
       message: 'Đổi tên tài liệu thành công',
       document,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return sendControllerError(res, error);
   }
 };
 
 // [DELETE] /api/workspaces/:workspaceId/documents/:documentId
 export const deleteWorkspaceDocument = async (req, res) => {
   try {
-    const { workspaceId, documentId } = req.params;
-    if (!isValidId(documentId)) {
-      return res.status(400).json({ message: 'documentId không hợp lệ' });
-    }
-
-    const document = await Document.findOneAndUpdate(
-      {
-        ...documentQuery(workspaceId, documentId),
-        isDeleted: { $ne: true },
-      },
-      {
-        isDeleted: true,
-        deletedAt: new Date(),
-      },
-      { new: true }
+    await deleteDocument(
+      req.params.workspaceId,
+      req.params.documentId,
+      req.user.id
     );
-    if (!document) {
-      return res.status(404).json({ message: 'Không tìm thấy tài liệu trong Workspace' });
-    }
-
-    await Activity.create({
-      workspaceId,
-      userId: req.user.id,
-      action: 'DELETED_DOCUMENT',
-      targetId: document._id,
-    });
 
     return res.status(200).json({
       message: 'Xóa tài liệu thành công',
-      documentId,
+      documentId: req.params.documentId,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return sendControllerError(res, error);
   }
 };
