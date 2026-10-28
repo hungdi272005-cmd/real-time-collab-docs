@@ -611,3 +611,57 @@
     display: none;
   }
 }
+
+/* Các thành phần bổ sung cho trang Workspace, Tài liệu và Hoạt động */
+.text-action-btn {
+  border: none;
+  background: transparent;
+  color: #60a5fa;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.text-action-btn:hover { color: #93c5fd; }
+.page-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.page-heading-row h1 { color: #fff; font-size: 24px; margin-bottom: 7px; }
+.page-heading-row p { color: #94a3b8; font-size: 14px; }
+.workspace-card {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.workspace-card-info { min-width: 0; }
+.workspace-open-label { color: #60a5fa; font-weight: 600; }
+.workspace-card:hover .workspace-open-label { color: #93c5fd; }
+.workspace-error {
+  color: #f87171;
+  padding: 20px 0;
+}
+.workspace-error .btn-submit { margin-top: 12px; }
+.back-action { margin-bottom: 20px; }
+.workspace-detail-banner { margin-bottom: 22px; }
+.workspace-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 28px;
+}
+.workspace-tab {
+  padding: 12px 18px;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+}
+.workspace-tab:hover, .workspace-tab.active {
+  color: #fff;
+  border-bottom-color: #2563eb;
+}
